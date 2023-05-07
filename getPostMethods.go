@@ -1,18 +1,17 @@
 package main
 
 import (
-	"encoding/json"
-	"io"
 	"net/http"
 	"strconv"
 )
 
-type answerGET[T resultTypes] struct {
-	Ok     bool `json:"ok"`
-	Result T    `json:"result"`
+type answerGET[T resultGetTypes] struct {
+	Ok          bool   `json:"ok"`
+	Result      T      `json:"result"`
+	Description string `json:"description"`
 }
 
-type resultTypes interface {
+type resultGetTypes interface {
 	[]update | user
 }
 
@@ -515,24 +514,6 @@ type user struct {
 	SupportInlineQueries    bool   `json:"supports_inline_queries"`
 }
 
-type update struct {
-	UpdateId          int64              `json:"update_id"`
-	Message           message            `json:"message"`
-	EditedMessage     message            `json:"edited_message"`
-	ChanelPost        message            `json:"channel_post"`
-	EditedChanelPost  message            `json:"edited_channel_post"`
-	InlineQuery       inlineQuery        `json:"inline_query"`
-	ChoseInlineResult chosenInlineResult `json:"chosen_inline_result"`
-	CallbackQuery     callbackQuery      `json:"callback_query"`
-	ShippingQuery     shippingQuery      `json:"shipping_query"`
-	PreCheckoutQuery  preCheckoutQuery   `json:"pre_checkout_query"`
-	Poll              poll               `json:"poll"`
-	PollAnswer        pollAnswer         `json:"poll_answer"`
-	MyChatMember      chatMemberUpdate   `json:"my_chat_member"`
-	ChatMemberUpdate  chatMemberUpdate   `json:"chat_member"`
-	ChatJoinRequest   chatJoinRequest    `json:"chat_join_request"`
-}
-
 type inlineQuery struct {
 	Id       string   `json:"id	"`
 	From     user     `json:"from"`
@@ -693,21 +674,6 @@ func (u *update) sendToPerson(text string, token string) {
 	chatID := strconv.FormatInt(u.Message.Chat.ID, 10)
 	str := "/sendMessage?chat_id=" + chatID + "&text=" + text
 	http.Get(urlApi + token + str)
-}
-
-// getInfo метод структуры AnswerGET для обработки
-// входящей от метода/команды информации в формате JSON
-func (a *answerGET[T]) getInfo(command, token string) {
-	resp, err := http.Get(urlApi + token + command)
-	if err != nil {
-		panic(err)
-	}
-	defer resp.Body.Close()
-	body, err2 := io.ReadAll(resp.Body)
-	if err2 != nil {
-		panic(err)
-	}
-	err = json.Unmarshal(body, a)
 }
 
 // answerPOST - хранит данные возвращаемые методом POST()
