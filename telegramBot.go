@@ -15,7 +15,7 @@ type TelegramBot struct {
 }
 
 func (t *TelegramBot) getUpdates(offset int64, limit int64, timeout int64, allowedUpdates []string) {
-	var requestLine = t.UrlServer + t.Token + "/getUpdates"
+	var requestLine = t.UrlServer + "bot" + t.Token + "/getUpdates"
 	var safeBuffer answerGET[[]update]
 	var notAlone = false
 	if offset != 0 || limit != 0 || timeout != 0 || len(allowedUpdates) != 0 {
@@ -54,7 +54,7 @@ func (t *TelegramBot) getUpdates(offset int64, limit int64, timeout int64, allow
 			requestLine += "]"
 		}
 	}
-	fmt.Println(requestLine)
+	//fmt.Println(requestLine)
 	err := json.Unmarshal(get(requestLine), &safeBuffer)
 	if err != nil {
 		panic(err)
