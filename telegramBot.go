@@ -8,11 +8,24 @@ import (
 	"strconv"
 )
 
+type communication struct {
+	dialogMass []dialog
+	uniqUsers  []user
+}
+
+type dialog struct {
+	firstPerson  user
+	secondPerson user
+	firstChatId  int64
+	secondChatId int64
+}
+
 type TelegramBot struct {
-	Token     string
-	UrlServer string
-	Update    []update
-	Data      string
+	Token         string
+	UrlServer     string
+	Update        []update
+	Data          string
+	Communication communication
 }
 
 func (t *TelegramBot) getUpdates(param paramGetUpdates) {
@@ -195,7 +208,8 @@ func (t *TelegramBot) sendMessage(param paramSendMessages) {
 	if saferBuffer.Ok {
 		// Подумать что сделать с принимаемым сообщением
 	} else {
-		fmt.Println(saferBuffer.Description)
+		fmt.Println(saferBuffer.Description + "Салам попалам")
+		fmt.Println(requestLine)
 	}
 	//fmt.Println(requestLine)
 }
@@ -219,6 +233,7 @@ func get(request string) []byte {
 
 func post(request string) []byte {
 	var body io.Reader
+
 	resp, err := http.Post(request, "", body)
 	if err != nil {
 		panic(err)
@@ -228,5 +243,7 @@ func post(request string) []byte {
 	if err2 != nil {
 		panic(err2)
 	}
+	//fmt.Println(string(byteMass))
+
 	return byteMass
 }

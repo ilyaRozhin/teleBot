@@ -9,10 +9,22 @@ type answerGET[T resultGetTypes] struct {
 	Ok          bool   `json:"ok"`
 	Result      T      `json:"result"`
 	Description string `json:"description"`
+	ErrorCode   int64  `json:"error_code"`
+}
+
+type answerSET[T resultSetTypes] struct {
+	Ok          bool   `json:"ok"`
+	Result      T      `json:"result"`
+	Description string `json:"description"`
+	ErrorCode   int64  `json:"error_code"`
 }
 
 type resultGetTypes interface {
 	[]update | user | message
+}
+
+type resultSetTypes interface {
+	message | bool
 }
 
 type message struct {
@@ -512,6 +524,8 @@ type user struct {
 	CanJoinGroups           bool   `json:"can_join_groups"`
 	CanReadAllGroupMessages bool   `json:"can_read_all_group_messages"`
 	SupportInlineQueries    bool   `json:"supports_inline_queries"`
+	EngageInDialogue        bool
+	Ratings                 []string
 }
 
 type inlineQuery struct {
