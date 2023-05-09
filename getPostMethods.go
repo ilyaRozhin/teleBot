@@ -12,7 +12,7 @@ type answerGET[T resultGetTypes] struct {
 }
 
 type resultGetTypes interface {
-	[]update | user
+	[]update | user | message
 }
 
 type message struct {
@@ -102,7 +102,7 @@ type webAppData struct {
 }
 
 type inlineKeyboardMarkup struct {
-	InlineKeyboard []inlineKeyboardButton `json:"inline_keyboard"`
+	InlineKeyboard [][]inlineKeyboardButton `json:"inline_keyboard"`
 }
 
 type inlineKeyboardButton struct {
@@ -112,7 +112,7 @@ type inlineKeyboardButton struct {
 	WebApp                       webAppInfo                  `json:"web_app"`
 	LoginUrl                     loginUrl                    `json:"login_url"`
 	SwitchInlineQuery            string                      `json:"switch_inline_query"`
-	SwitchInlineQueryCurrentChat string                      `json:"switch_inline_query_current_chat	String"`
+	SwitchInlineQueryCurrentChat string                      `json:"switch_inline_query_current_chat"`
 	SwitchInlineQueryChosenChat  switchInlineQueryChosenChat `json:"switch_inline_query_chosen_chat"`
 	CallbackGame                 callBackGame                `json:"callback_game"`
 	Pay                          bool                        `json:"pay"`
@@ -667,6 +667,31 @@ type chatInviteLink struct {
 	ExpireDate              int64  `json:"expire_date"`
 	MemberLimit             int64  `json:"member_limit"`
 	PendingJoinRequestCount int64  `json:"pending_join_request_count"`
+}
+
+type paramGetUpdates struct {
+	offset         int64
+	limit          int64
+	timeout        int64
+	allowedUpdates []string
+}
+
+type paramSendMessages struct {
+	chatId                   int64
+	messageThreadId          int64
+	text                     string
+	parseMode                string
+	entities                 []messageEntity
+	disableWebPagePreview    bool
+	disableNotification      bool
+	protectContent           bool
+	replyToMessageId         int64
+	allowSendingWithoutReply bool
+	replyMarkup              string //Пока что думаю байт массив лучше map[string]interface{}
+}
+
+type inputFile struct {
+	//Пока не понятно нужно будет разобраться на примере с входными данными
 }
 
 // sendToPerson функция отправки ответа пользователю
