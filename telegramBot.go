@@ -21,11 +21,12 @@ type dialog struct {
 }
 
 type TelegramBot struct {
-	Token         string
-	UrlServer     string
-	Update        []update
-	Data          string
-	Communication communication
+	Token             string
+	UrlServer         string
+	Update            []update
+	Data              string
+	LastButtonCommand string
+	Communication     communication
 }
 
 func (t *TelegramBot) getUpdates(param paramGetUpdates) {

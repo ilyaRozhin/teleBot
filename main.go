@@ -10,10 +10,10 @@ import (
 const urlApi = "https://api.telegram.org/"
 
 // Запоминаем %0A - символ перехода на новую строку
-func commandHandler(t *TelegramBot) {
+func commandHandler(t *TelegramBot, command string, chatID int64) {
 	var param paramSendMessages
-	param.chatId = t.Update[0].Message.Chat.ID
-	switch t.Update[0].Message.Text {
+	param.chatId = chatID
+	switch command {
 	case "/start":
 		param.text = "Привет, @" + t.Update[0].Message.From.UserName + " ты здесь новенький, набирай /help чтобы войти в курс дел."
 		t.sendMessage(param)
@@ -44,6 +44,9 @@ func commandHandler(t *TelegramBot) {
 		t.sendMessage(param)
 	case "/startchat":
 		inlineKeyboardHandler(&param, "/startchat")
+		t.sendMessage(param)
+	case "/menu":
+		mainMenu(&param)
 		t.sendMessage(param)
 	}
 }
@@ -78,8 +81,6 @@ func mainMenu(param *paramSendMessages) {
 func inlineKeyboardHandler(param *paramSendMessages, str string) {
 	var keyboardMarkup inlineKeyboardMarkup
 	switch str {
-	case "/menu":
-		mainMenu(param)
 	case "/search":
 		param.text = "*Важные данные о котиках\\.\\.\\.*%0A%0AВыбери необходимое действие с описанием твоего котика\\. " +
 			"Не забывай\\, что ты можешь посмотреть его либо изменить\\. Как только описание будет готов можно приступить к поискам" +
@@ -130,11 +131,7 @@ func inlineKeyboardHandler(param *paramSendMessages, str string) {
 }
 
 func handlerStartEnd(t *TelegramBot) {
-	commandHandler(t) //Обрабатываем команду
-}
-
-func dataIn(t *TelegramBot) {
-	t.Data = t.Update[0].Message.Text
+	commandHandler(t, t.Update[0].Message.Text, t.Update[0].Message.Chat.ID) //Обрабатываем команду
 }
 
 func convertForRequest(str string) string {
@@ -194,6 +191,8 @@ func callbackKeyboardExecutor(t *TelegramBot) {
 		param.chatId = t.Update[0].CallbackQuery.From.ID
 		t.sendMessage(param)
 		if t.Data != "" {
+			mainMenu(&param)
+			t.sendMessage(param)
 			break
 		}
 		fallthrough
@@ -223,33 +222,37 @@ func callbackKeyboardExecutor(t *TelegramBot) {
 		t.sendMessage(param)
 	case "start_search":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id
-		t.Data = convertForRequest(t.Data)
-		byteMass := get("https://api.unsplash.com/photos/random?query=" + t.Data + "&count=1&content_filter=high" + "&client_id=6b_vt-YJ4ntrxcK6-CxNx1uUS_glNcBdn-LD1Bd2sXU")
-		err := json.Unmarshal(byteMass, &newPhoto)
-		if err != nil {
-			panic(err)
-		}
-		//fmt.Println(newPhoto[0].Links.Download)
-		if t.sendPhoto(newPhoto[0].Links.Download) {
-			param.text = "*Повторим еще разочек\\? Или ты уже устал\\?*"
-			requestLine += "&text=Картинка найдена!"
+		if t.Data == "" {
+			t.sendMessage(paramSendMessages{chatId: t.Update[0].CallbackQuery.From.ID, parseMode: "MarkdownV2", text: "_*Вы еще не ввели описание котика\\. Попробуйте нажать кнопку Изменить\\.*_"})
 		} else {
-			param.text = "*Произошла ошибка(такое бывает), повтроить поиск\\?*"
-			requestLine += "&text=Что-то пошло не так!"
+			t.Data = convertForRequest(t.Data)
+			byteMass := get("https://api.unsplash.com/photos/random?query=" + t.Data + "&count=1&content_filter=high" + "&client_id=6b_vt-YJ4ntrxcK6-CxNx1uUS_glNcBdn-LD1Bd2sXU")
+			err := json.Unmarshal(byteMass, &newPhoto)
+			if err != nil {
+				panic(err)
+			}
+			//fmt.Println(newPhoto[0].Links.Download)
+			if t.sendPhoto(newPhoto[0].Links.Download) {
+				param.text = "*Повторим еще разочек\\? Или ты уже устал\\?*"
+				requestLine += "&text=Картинка найдена!"
+			} else {
+				param.text = "*Произошла ошибка\\(такое бывает\\), повторить поиск\\?*"
+				requestLine += "&text=Что-то пошло не так!"
+			}
+			param.chatId = t.Update[0].CallbackQuery.From.ID
+			param.parseMode = "MarkdownV2"
+			menuButtonConstruct(&keyboard, 1, 2)
+			keyboard.InlineKeyboard[0][0].Text = "Да"
+			keyboard.InlineKeyboard[0][0].CallbackData = "yes_cat"
+			keyboard.InlineKeyboard[0][1].Text = "Нет"
+			keyboard.InlineKeyboard[0][1].CallbackData = "no_cat"
+			byteMass2, err2 := json.Marshal(keyboard)
+			if err2 != nil {
+				panic(err2)
+			}
+			param.replyMarkup = string(byteMass2)
+			t.sendMessage(param)
 		}
-		param.chatId = t.Update[0].CallbackQuery.From.ID
-		param.parseMode = "MarkdownV2"
-		menuButtonConstruct(&keyboard, 1, 2)
-		keyboard.InlineKeyboard[0][0].Text = "Да"
-		keyboard.InlineKeyboard[0][0].CallbackData = "yes_cat"
-		keyboard.InlineKeyboard[0][1].Text = "Нет"
-		keyboard.InlineKeyboard[0][1].CallbackData = "no_cat"
-		byteMass2, err2 := json.Marshal(keyboard)
-		if err2 != nil {
-			panic(err2)
-		}
-		param.replyMarkup = string(byteMass2)
-		t.sendMessage(param)
 	case "yes_cat":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id
 		t.Data = convertForRequest(t.Data)
@@ -263,7 +266,7 @@ func callbackKeyboardExecutor(t *TelegramBot) {
 			param.text = "*Повторим еще разочек\\? Или ты уже устал\\?*"
 			requestLine += "&text=Картинка найдена!"
 		} else {
-			param.text = "*Произошла ошибка(такое бывает), повтроить поиск\\?*"
+			param.text = "*Произошла ошибка\\(такое бывает\\), повторить поиск\\?*"
 			requestLine += "&text=Что-то пошло не так!"
 		}
 		param.chatId = t.Update[0].CallbackQuery.From.ID
@@ -283,38 +286,73 @@ func callbackKeyboardExecutor(t *TelegramBot) {
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Переходим в главное меню..."
 		param.chatId = t.Update[0].CallbackQuery.From.ID
 		mainMenu(&param)
+		t.sendMessage(param)
 	case "love":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Спасибо за ваш отзыв!"
-		//t.Communication.
+		param.text = "*Не работает\\!*" + "%0A%0AПрошу прощения, но данный сервис еще не разработан до конца\\." +
+			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\. Чтобы перейти в главное меню тыкните сюда /menu\\."
+		param.parseMode = "MarkdownV2"
+		param.chatId = t.Update[0].CallbackQuery.From.ID
+		t.sendMessage(param)
+		//mainMenu(&param)
+		//t.sendMessage(param)
 	case "good":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Спасибо за ваш отзыв!"
+		param.text = "*Не работает\\!*" + "%0A%0AПрошу прощения, но данный сервис еще не разработан до конца\\." +
+			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\. Чтобы перейти в главное меню тыкните сюда /menu\\."
+		param.parseMode = "MarkdownV2"
+		param.chatId = t.Update[0].CallbackQuery.From.ID
+		t.sendMessage(param)
+		//mainMenu(&param)
+		//t.sendMessage(param)
 	case "bad":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Спасибо за ваш отзыв!"
+		param.text = "*Не работает\\!*" + "%0A%0AПрошу прощения, но данный сервис еще не разработан до конца\\." +
+			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\. Чтобы перейти в главное меню тыкните сюда /menu\\."
+		param.parseMode = "MarkdownV2"
+		param.chatId = t.Update[0].CallbackQuery.From.ID
+		t.sendMessage(param)
+		//mainMenu(&param)
+		//t.sendMessage(param)
 	case "woman":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Уже начали поиск собеседника ..."
 		param.text = "*Не работает\\!*" + "%0A%0AПрошу прощения, но данный сервис еще не разработан до конца\\." +
-			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\."
+			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\. Чтобы перейти в главное меню тыкните сюда /menu\\."
 		param.parseMode = "MarkdownV2"
 		param.chatId = t.Update[0].CallbackQuery.From.ID
 		t.sendMessage(param)
+		//mainMenu(&param)
+		//t.sendMessage(param)
+		//t.LastButtonCommand = "woman"
 	case "man":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Уже начали поиск собеседника ..."
 		param.text = "*Не работает\\!*" + "%0A%0AПрошу прощения, но данный сервис еще не разработан до конца\\." +
-			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\."
+			" Если у вас есть интересные идеи пишите сюда\\: @KuZy\\_i\\. Чтобы перейти в главное меню тыкните сюда /menu\\."
 		param.parseMode = "MarkdownV2"
 		param.chatId = t.Update[0].CallbackQuery.From.ID
 		t.sendMessage(param)
+		//mainMenu(&param)
+		//t.sendMessage(param)
 	case "yes":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Ждёмс ..."
 		param.text = "_*Введите новое описание\\:*_"
 		param.parseMode = "MarkdownV2"
 		param.chatId = t.Update[0].CallbackQuery.From.ID
+		t.Data = "nil"
 		t.sendMessage(param)
-		t.Data = "nil" // (КОСТЫЛЬ)
 	case "no":
 		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Переходим в главное меню..."
 		param.chatId = t.Update[0].CallbackQuery.From.ID
 		mainMenu(&param)
+		t.sendMessage(param)
+	case "search":
+		commandHandler(t, "/search", t.Update[0].CallbackQuery.From.ID)
+	case "help":
+		commandHandler(t, "/help", t.Update[0].CallbackQuery.From.ID)
+	case "communicate":
+		commandHandler(t, "/startchat", t.Update[0].CallbackQuery.From.ID)
+	case "aboutme":
+		commandHandler(t, "/aboutme", t.Update[0].CallbackQuery.From.ID)
 	}
 	post(requestLine)
 }
@@ -339,12 +377,12 @@ func main() {
 		if len(tBot.Update) != 0 {
 			param.offset = tBot.Update[len(tBot.Update)-1].UpdateId
 			if tBot.Data == "nil" {
-				dataIn(&tBot)
+				tBot.Data = tBot.Update[0].Message.Text
 				tBot.sendParamMessage("_*Новое описание успешно сохранено\\!\\!\\!*_")
 				paramMessage.chatId = tBot.Update[0].Message.Chat.ID
 				mainMenu(&paramMessage)
 				tBot.sendMessage(paramMessage)
-			} // (КОСТЫЛЬ) Строка: 172
+			}
 			handlerStartEnd(&tBot)
 			lastCommand = tBot.Update[0].Message.Text
 			if tBot.Update[0].CallbackQuery.Data != "" {
