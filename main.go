@@ -70,7 +70,7 @@ func mainMenu(param *paramSendMessages) {
 	keyboardMarkup.InlineKeyboard[0][1].Text = "Общение"
 	keyboardMarkup.InlineKeyboard[0][1].CallbackData = "communicate"
 	keyboardMarkup.InlineKeyboard[1][1].Text = "О создателе"
-	keyboardMarkup.InlineKeyboard[1][1].CallbackData = "about_me"
+	keyboardMarkup.InlineKeyboard[1][1].CallbackData = "aboutme"
 	byteMass, err := json.Marshal(keyboardMarkup)
 	if err != nil {
 		panic(err)
@@ -346,12 +346,16 @@ func callbackKeyboardExecutor(t *TelegramBot) {
 		mainMenu(&param)
 		t.sendMessage(param)
 	case "search":
+		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Начнем поиск..."
 		commandHandler(t, "/search", t.Update[0].CallbackQuery.From.ID)
 	case "help":
+		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Переходим в меню помощи..."
 		commandHandler(t, "/help", t.Update[0].CallbackQuery.From.ID)
 	case "communicate":
+		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Преходим в меню общения..."
 		commandHandler(t, "/startchat", t.Update[0].CallbackQuery.From.ID)
 	case "aboutme":
+		requestLine += "?callback_query_id=" + t.Update[0].CallbackQuery.Id + "&text=Загружаем..."
 		commandHandler(t, "/aboutme", t.Update[0].CallbackQuery.From.ID)
 	}
 	post(requestLine)
